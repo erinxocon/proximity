@@ -1,10 +1,14 @@
 import sys
 import time
 import json
+import sqlite3
 import ble_scan_core as ble
 import bluetooth._bluetooth as bluez
 
+
 from multiprocessing import Process, Pipe
+
+DATABASE = '/tmp/flaskr.db'
 
 
 class BLE_Listen(object):
@@ -37,18 +41,34 @@ class BLE_Listen(object):
             l = ble.parse_events(sock, 10)
             con.send(l)
             time.sleep(2)
-            #print "JSON THREAD:", json.dumps(l)
+            #print "BLE THREAD:", json.dumps(l)
 
 
 def main(parent_conn):
     con = parent_conn
+    db = connect_db()
     while True:
-        if con.poll(30):
+        if con.poll(5):
             print "Main Thread is executing"
             d = con.recv()
             print json.dumps(d)
+            for k in d.keys():
+                t = (k, d[k]['uuid'], d[k]['majorid'], d[k]['minorid'], d[k]['rssi'], d[k]['calibratedtx'])
+                try:
+                    db.execute('DELETE FROM devices;')
+                    db.execute('VACUUM;')
+                    db.execute('INSERT INTO devices VALUES (?,?,?,?,?,?)', t)
+                    db.commit()
+                except sqlite3.IntegrityError:
+                    db.rollback()
         else:
             print "no new data"
+            db.execute('DELETE FROM devices;')
+            db.execute('VACUUM;')
+
+
+def connect_db():
+    return sqlite3.connect(DATABASE)
 
 
 if __name__ == '__main__':

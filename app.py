@@ -1,5 +1,6 @@
+import json
 import sqlite3
-from flask import Flask, request, g, jsonify
+from flask import Flask, request, g, jsonify, make_response
 
 # configuration
 DATABASE = '/tmp/flaskr.db'
@@ -47,6 +48,17 @@ def drop_subscribers():
     g.db.commit()
     return "subscribers table flushed"
 
+
+@app.route('/devices')
+def get_devices():
+    l = []
+    cur = g.db.execute('SELECT * FROM devices')
+    for row in cur.fetchall():
+        j = {"mac": str(row[0]), "uuid": str(row[1]), "majorid": row[2], "minorid": row[3], "rssi": row[4], "tx_calibrated": row[5]}
+        l.append(j)
+    resp = make_response(json.dumps(l))
+    resp.headers['Content-Type'] = 'text/json'
+    return resp
 
 if __name__ == '__main__':
     app.debug = DEBUG

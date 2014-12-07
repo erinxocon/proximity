@@ -5,9 +5,8 @@ create table subscribers (
   ip text unique not null
 );
 create table devices (
-  id INTEGER PRIMARY KEY,
   mac text unique,
-  uuid text,
+  uuid text PRIMARY KEY,
   majorid int,
   minorid int,
   rssi int,
