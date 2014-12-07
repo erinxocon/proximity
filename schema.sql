@@ -1,11 +1,11 @@
 drop table if exists subscribers;
 drop table if exists devices;
 create table subscribers (
-  id integer primary key autoincrement,
-  ip text not null
+  id INTEGER PRIMARY KEY,
+  ip text unique not null
 );
 create table devices (
-  id integer primary key autoincrement,
+  id INTEGER PRIMARY KEY,
   mac text unique,
   uuid text,
   majorid int,

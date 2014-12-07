@@ -1,41 +1,53 @@
-import sys
-import time
-import json
-import threading
-import ble_scan_test as ble
-import bluetooth._bluetooth as bluez
+import sqlite3
+from flask import Flask, request, g, jsonify
+
+# configuration
+DATABASE = '/tmp/flaskr.db'
+DEBUG = True
+SECRET_KEY = 'development key'
+USERNAME = 'admin'
+PASSWORD = 'default'
+
+app = Flask(__name__)
+app.config.from_object(__name__)
 
 
-class BLE_Listen(object):
-
-    def __init__(self, dev_id):
-        """ Constructor"""
-
-        self.dev_id = dev_id
-
-        thread = threading.Thread(target=self.run, args=(self.dev_id,))
-        thread.daemon = True                            # Daemonize thread
-        thread.start()                                  # Start the execution
-
-    def run(self, dev_id):
-        """ Method that runs forever """
-        try:
-            sock = bluez.hci_open_dev(dev_id)
-            print "ble thread started"
-        except:
-            print "error accessing bluetooth device..."
-            sys.exit(1)
-
-        ble.hci_le_set_scan_parameters(sock)
-        ble.hci_enable_le_scan(sock)
-        print "scan mode acquired"
-        while True:
-            l = ble.parse_events(sock, 10)
-            print json.dumps(l)
+def connect_db():
+    return sqlite3.connect(app.config['DATABASE'])
 
 
-example = BLE_Listen(0)
-time.sleep(3)
-while True:
-    print "Main Thread is executing"
-    time.sleep(10)
+@app.before_request
+def before_request():
+    g.db = connect_db()
+
+
+@app.teardown_request
+def teardown_request(exception):
+    db = getattr(g, 'db', None)
+    if db is not None:
+        db.close()
+
+
+@app.route('/subscribe', methods=['GET'])
+def subscribe_player():
+    origin = request.headers.get('X-Forwarded-For', request.remote_addr)
+    try:
+        g.db.execute('INSERT INTO subscribers (ip) VALUES (?)', (origin,))
+        g.db.commit()
+    except sqlite3.IntegrityError:
+        return "You've already subscribed!"
+
+    return jsonify(origin=request.headers.get('X-Forwarded-For', request.remote_addr))
+
+
+@app.route('/flush', methods=['GET'])
+def drop_subscribers():
+    g.db.execute('DELETE FROM subscribers;')
+    g.db.execute('VACUUM;')
+    g.db.commit()
+    return "subscribers table flushed"
+
+
+if __name__ == '__main__':
+    app.debug = DEBUG
+    app.run(host='0.0.0.0', port=80)
