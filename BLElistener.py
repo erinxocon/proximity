@@ -55,7 +55,7 @@ def main(parent_conn):
             for k in d.keys():
                 t = (k, d[k]['uuid'], d[k]['majorid'], d[k]['minorid'], d[k]['rssi'], d[k]['calibratedtx'], 0)
                 try:
-                    db.execute('DELETE FROM devices;')
+                    db.execute('DELETE FROM devices WHERE isAcquired = 0;')
                     db.execute('VACUUM;')
                     db.execute('INSERT INTO devices VALUES (?,?,?,?,?,?,?)', t)
                     db.commit()
