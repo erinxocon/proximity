@@ -2,6 +2,7 @@ import sys
 import time
 import json
 import sqlite3
+import requests
 import ble_scan_core as ble
 import bluetooth._bluetooth as bluez
 
@@ -45,11 +46,13 @@ class BLE_Listen(object):
 
 
 def main(parent_conn):
+    clear = False
     con = parent_conn
     db = connect_db()
     while True:
         if con.poll(5):
             print "Main Thread is executing"
+            clear = False
             d = con.recv()
             print json.dumps(d)
             for k in d.keys():
@@ -61,10 +64,14 @@ def main(parent_conn):
                     db.commit()
                 except sqlite3.IntegrityError:
                     db.rollback()
+            requests.get('http://127.0.0.1/newData')
         else:
             print "no new data"
-            db.execute('DELETE FROM devices;')
-            db.execute('VACUUM;')
+            if not clear:
+                requests.get('http://127.0.0.1/newData')
+                db.execute('DELETE FROM devices;')
+                db.execute('VACUUM;')
+                clear = True
 
 
 def connect_db():
