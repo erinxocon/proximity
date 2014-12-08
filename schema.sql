@@ -1,8 +1,8 @@
 drop table if exists subscribers;
 drop table if exists devices;
 create table subscribers (
-  id INTEGER PRIMARY KEY,
-  ip text unique not null
+  ip text PRIMARY KEY,
+  hasAcquired int not null
 );
 create table devices (
   mac text unique,
