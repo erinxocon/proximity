@@ -10,5 +10,6 @@ create table devices (
   majorid int,
   minorid int,
   rssi int,
-  tx_calibrated int
+  tx_calibrated int,
+  isAcquired int not null
 );

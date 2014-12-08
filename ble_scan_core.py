@@ -151,7 +151,7 @@ def parse_events(sock, loop_count=100):
                             print "\tMAJOR: ", printpacket(pkt[report_pkt_offset - 6:report_pkt_offset - 4])
                             print "\tMINOR: ", printpacket(pkt[report_pkt_offset - 4:report_pkt_offset - 2])
                             print "\tMAC address: ", packed_bdaddr_to_string(pkt[report_pkt_offset + 3:report_pkt_offset + 9])
-                            # commented out - don't know what this byte is.  It's NOT TXPower LOOK AT BLE Specification
+                            # Only calibrated tX rate for ibeacons, not other BLE profiles
                             print "\t(Unknown):", struct.unpack("b", pkt[report_pkt_offset - 2])
                             print "\tRSSI:", struct.unpack("b", pkt[report_pkt_offset - 1])
     sock.setsockopt(bluez.SOL_HCI, bluez.HCI_FILTER, old_filter)

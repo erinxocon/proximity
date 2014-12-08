@@ -5,9 +5,6 @@ from flask import Flask, request, g, jsonify, make_response
 # configuration
 DATABASE = '/tmp/flaskr.db'
 DEBUG = True
-SECRET_KEY = 'development key'
-USERNAME = 'admin'
-PASSWORD = 'default'
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -49,16 +46,23 @@ def drop_subscribers():
     return "subscribers table flushed"
 
 
-@app.route('/devices')
+@app.route('/devices', method=['GET'])
 def get_devices():
     l = []
     cur = g.db.execute('SELECT * FROM devices')
     for row in cur.fetchall():
-        j = {"mac": str(row[0]), "uuid": str(row[1]), "majorid": row[2], "minorid": row[3], "rssi": row[4], "tx_calibrated": row[5]}
+        j = {"mac": str(row[0]), "uuid": str(row[1]), "majorid": row[2], "minorid": row[3], "rssi": row[4], "tx_calibrated": row[5], "isAcuired": row[6]}
         l.append(j)
     resp = make_response(json.dumps(l))
     resp.headers['Content-Type'] = 'text/json'
     return resp
+
+
+@app.route('/acquireDevice', methods=['GET'])
+def acquire_device():
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+
 
 if __name__ == '__main__':
     app.debug = DEBUG
