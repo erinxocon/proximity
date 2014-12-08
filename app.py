@@ -93,17 +93,21 @@ def get_devices():
 @app.route('/acquireDevice', methods=['GET'])
 def acquire_device():
     ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    cur = g.db.execute('SELECT * from devices WHERE isAcquired = 0 ORDER BY rssi')
-    row = cur.fetchone()
-    g.db.commit()
-    d1 = {"mac": str(row[0]), "uuid": str(row[1]), "majorid": row[2], "minorid": row[3], "rssi": row[4], "tx_calibrated": row[5], "isAcquired": row[6]}
-    d2 = {'BLE Data': 'Main'}
-    if CP_LIVE:
-        setVar = set_cm_variable(ip, d1, app.config['USERNAME'], app.config['PASSWORD'])
+    try:
+        cur = g.db.execute('SELECT * from devices WHERE isAcquired = 0 ORDER BY rssi')
+        row = cur.fetchone()
+        d1 = {"mac": str(row[0]), "uuid": str(row[1]), "majorid": row[2], "minorid": row[3], "rssi": row[4], "tx_calibrated": row[5], "isAcquired": row[6]}
+        d2 = {'BLE Data': 'Main'}
+        if CP_LIVE:
+            setVar = set_cm_variable(ip, d1, app.config['USERNAME'], app.config['PASSWORD'])
+            playContent = play_cm_content(ip, d2, app.config['USERNAME'], app.config['PASSWORD'])
+            return jsonify(variables=setVar, content=playContent)
+        else:
+            return jsonify(status='Check sqlite3 for results')
+    except TypeError:
+        d2 = {'Blank': 'Main'}
         playContent = play_cm_content(ip, d2, app.config['USERNAME'], app.config['PASSWORD'])
-        return jsonify(variables=setVar, content=playContent)
-    else:
-        return jsonify(status='Check sqlite3 for results')
+        return jsonify(status='Played Blank.')
 
 
 @app.route('/engageDevice/<uuid>', methods=['GET'])
@@ -111,6 +115,8 @@ def engage_device(uuid):
     ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     g.db.execute('UPDATE devices SET isAcquired = 1 WHERE uuid = ?', (uuid,))
     g.db.execute('UPDATE subscribers SET hasAcquired = 1 WHERE ip = ?', (ip,))
+    g.db.commit()
+    return jsonify(status='Device is Engaged')
 
 
 @app.route('/dropDevice/<uuid>', methods=['GET'])
@@ -121,6 +127,15 @@ def drop_device(uuid):
     g.db.execute('UPDATE subscribers SET hasAcquired = 0 WHERE ip = ?', (ip,))
     g.db.commit()
     return jsonify(status='Device Dropped.')
+
+
+@app.route('/newData', methods=['GET'])
+def webhook():
+    cur = g.db.execute('SELECT * FROM subscribers')
+    for row in cur.fetchall():
+        d = {'Blank': 'Control', 'CONTROL:AcquireDevice': 'Control'}
+        play_cm_content(row[0], d, app.config['USERNAME'], app.config['PASSWORD'])
+    return jsonify(status='Alerted subscribers to check for new data')
 
 if __name__ == '__main__':
     app.debug = DEBUG
